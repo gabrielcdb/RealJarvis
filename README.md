@@ -63,10 +63,13 @@ Libraries
     For audio treatment:
         -wave
     
-    to install a library you can use: 
+    To install a library you can use:
+        py -m pip install -r path/requirements.txt
+        
+    Or one by one:
         py -m pip install libraryname
-
-    here is a list of all commands I ran:
+    
+    Here is a list of all commands I ran:
         For Speech recognition:
             py -m pip install openai
             py -m pip install whisper
@@ -79,7 +82,7 @@ Libraries
             py -m pip install gTTS
             py -m pip install elevenlabs
             (i don't remember why this one) py -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-
+    
 
 
 Set up
