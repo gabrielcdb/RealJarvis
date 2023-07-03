@@ -50,7 +50,7 @@ Libraries
 
     For Speech recognition:
         -openai
-        -whisper
+        -git+https://github.com/openai/whisper.git 
 
     For Display and sound:
         -pygame (audio playing, and Jarvis display)
@@ -72,7 +72,7 @@ Libraries
     Here is a list of all commands I ran:
         For Speech recognition:
             py -m pip install openai
-            py -m pip install whisper
+            py -m pip install git+https://github.com/openai/whisper.git 
 
         For Display and sound:
             py -m pip install pygame
