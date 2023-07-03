@@ -8,6 +8,10 @@ Also as soon as possible I will link it to Auto-GPT to perform breathtaking auto
 
 Stay tuned!
 
+By the way, this is all python very quick code for now, I'm not sure yet in the framework I will use, but I also want to keep it as accessible as I can for getting as much help as I can!
+
+## 🎬 Demonstration
+https://www.twitch.tv/videos/1861765919
 
 ## 📖 Functionnalities
 RealJarvis can handle common GPT conversations.
@@ -21,6 +25,7 @@ For now actions supported are:
     -Muting and unmuting itself (need improvements)
 
     *Incoming:
+    -Voice customization, with elevenlabs
     -Get local weather from you computer data 
     -Generating word file and fill it 
     -Open a web page
@@ -45,7 +50,7 @@ Libraries
 
     For Speech recognition:
         -openai
-        -whisper
+        -git+https://github.com/openai/whisper.git 
 
     For Display and sound:
         -pygame (audio playing, and Jarvis display)
@@ -58,13 +63,16 @@ Libraries
     For audio treatment:
         -wave
     
-    to install a library you can use: 
+    To install a libraries you can use:
+        py -m pip install -r path/requirements.txt
+        
+    Or one by one:
         py -m pip install libraryname
-
-    here is a list of all commands I ran:
+    
+    Here is a list of all commands I ran:
         For Speech recognition:
             py -m pip install openai
-            py -m pip install whisper
+            py -m pip install git+https://github.com/openai/whisper.git 
 
         For Display and sound:
             py -m pip install pygame
@@ -74,7 +82,7 @@ Libraries
             py -m pip install gTTS
             py -m pip install elevenlabs
             (i don't remember why this one) py -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-
+    
 
 
 Set up
