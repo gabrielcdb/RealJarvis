@@ -2,18 +2,39 @@
 A working Speech to Speech AI assistant that can interact with you, manage your system, and more!
 
 This project is just a scratch of the potential power of this tool.
-You do not hesitate to provide me with ideas to get it better and accomplish better tasks, it's for now working on python but will soon be hosted as a desktop app or maybe an android app. Stay tuned!
+Do not hesitate to provide us with ideas to get it better and accomplish better tasks, it's for now working on python but will soon be hosted as a desktop app or maybe an android app.
 
+Also as soon as possible I will link it to Auto-GPT to perform breathtaking auto computations!
+
+Stay tuned!
+
+
+## 📖 Functionnalities
+RealJarvis can handle common GPT conversations.
+
+It can also perform real actions on you computer! 
+
+For now actions supported are:
+
+    -Chatting
+    -Closing itself
+    -Muting and unmuting itself (need improvements)
+
+    *Incoming:
+    -Get local weather from you computer data 
+    -Generating word file and fill it 
+    -Open a web page
+    more to go!
+    
 Languages suported are ... A lot!
-    ASR (whisper models allow 96 )
+
+    ASR (whisper models allow 96 languages )
     LLM (ChatGPT well, basically any language spoken on internet before 2021, if it has enough speakers)
     TTS (-eleven labs multilingual allows English, German, Polish, Spanish, Italian, French, Portuguese, and Hindi
         -gTTS allows any google translation languages, but not yet suported in code, coming soon (you can set it up manually)
         )
-
-Required for use:
-
-APIS KEYS, key them secret, never ever push or commit them!
+## ⚙️ Setup
+APIS KEYS, keep them secret, at all costs, never ever push or commit them!
 
     -openai API KEY : https://platform.openai.com/account/api-keys   ()
 
