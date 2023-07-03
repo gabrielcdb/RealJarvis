@@ -3,6 +3,7 @@ import queue
 import time
 import pygame
 import requests
+import io
 
 CHUNK_SIZE = 1024
 url = "https://api.elevenlabs.io/v1/text-to-speech/TxGEqnHWrfWFTfGW9XjX"
