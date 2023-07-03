@@ -10,11 +10,7 @@ import pyttsx3
 
 CHUNK_SIZE = 1024
 url = "https://api.elevenlabs.io/v1/text-to-speech/TxGEqnHWrfWFTfGW9XjX"
-headers = {
-  "Accept": "audio/mpeg",
-  "Content-Type": "application/json",
-  "xi-api-key": "747e35b6483da5dc04404854646d2bcd"
-}
+
 class TTSManager:
     def __init__(self, model, api_key = "",system = None):
         self.system = system
@@ -27,6 +23,11 @@ class TTSManager:
         self.load_thread = threading.Thread(target=self.load_next)
         self.load_thread.start()
         elevenlabs.set_api_key(api_key)
+        self.headers = {
+        "Accept": "audio/mpeg",
+        "Content-Type": "application/json",
+        "xi-api-key": api_key
+        }
         self.language = 'en'
         self.pitch=1.5 
         self.volume=1.25
@@ -46,7 +47,7 @@ class TTSManager:
                             "similarity_boost": 0.5
                         }
                     }
-                    response = requests.post(url, json=data, headers=headers, stream=True)
+                    response = requests.post(url, json=data, headers=self.headers, stream=True)
                     byte_stream = io.BytesIO()
                     for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
                         if chunk:
@@ -73,7 +74,7 @@ class TTSManager:
                     "similarity_boost": 0.5
                 }
             }
-            response = requests.post(url, json=data, headers=headers, stream=True)
+            response = requests.post(url, json=data, headers=self.headers, stream=True)
             byte_stream = io.BytesIO()
             for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
                 if chunk:
