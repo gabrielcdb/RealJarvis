@@ -63,7 +63,7 @@ Libraries
     For audio treatment:
         -wave
     
-    To install a library you can use:
+    To install a libraries you can use:
         py -m pip install -r path/requirements.txt
         
     Or one by one:
