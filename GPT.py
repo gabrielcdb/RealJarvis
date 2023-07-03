@@ -7,11 +7,11 @@ import os
 
 # Create a class for the GPT Handler
 class GPTHandler:
-    def __init__(self,key,system, model):
+    def __init__(self,api_key,system, model):
         self.system = system
         self.message_queue = Queue()
         self.running = False
-        openai.api_key = key
+        openai.api_key = api_key
         self.model = model
 
     # Define the function
@@ -27,8 +27,10 @@ class GPTHandler:
         goodbye = {
             "bye": bye,
         }
+        print("Goodbye")
         os._exit(0)
         return json.dumps(goodbye)
+        
     def standby(self):
         return
 
@@ -51,7 +53,7 @@ class GPTHandler:
     def run_conversation(self):
         messages = [{"role": "system", "content": "You are Jarvis from iron man, a gentle and polite british AI assistant that always call the user 'Sir' or 'Monsieur'. You are currently connected to an ASR system and a TTS system so you now have voice and ears, behave accordingly"}]
         #messages.append({"role": "user", "content": "Please greet your master, introduce yourself, then ask him his name to better serve him. After that you will always call him by 'master + the name provided."})
-        
+        print(f"Starting LLM {self.model} model")
         while self.running:
             while not self.message_queue.empty():
                 new_message = self.message_queue.get()
@@ -178,7 +180,7 @@ class GPTHandler:
                                             sentence = content[-1]
                                         time.sleep(0.2)
 
-                    if sentence != "":
+                    if sentence != "." and sentence != "!" and sentence != "?" and sentence != ":" and sentence != ",":
                         self.system.enqueue_tts_request(sentence)
                         sentence = ""           
             time.sleep(0.2)
