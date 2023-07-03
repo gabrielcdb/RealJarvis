@@ -6,7 +6,6 @@ import wave
 import struct
 from datetime import datetime
 from queue import Queue
-import whisper
 import socket
 import openai
 
@@ -45,16 +44,17 @@ class ASR(threading.Thread):
 
     def run_lee(self):
         command = "py B:/OneDrive/BureauPortable/Recognition-model/recognition_wo_mmd2.py"
-        subprocess.Popen(command, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+        subprocess.Popen(command, shell=True)
         time.sleep(2)
         command = "adintool.exe -in mic -out adinnet -server 127.0.0.1  -port 5533 -cutsilence -nostrip"
-        subprocess.Popen(command, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+        subprocess.Popen(command, shell=True)
         time.sleep(2)
         host = 'localhost'  # Server IP
         port = 5534        # Server Port
         client_socket  = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client_socket.connect((host, port))
         print("ASR model lee-ueno loaded")
+        print("Listening...")
         # Run the server loop
         while True:
             # Receive data from the client
@@ -71,78 +71,67 @@ class ASR(threading.Thread):
             self.system.enqueue_system_request("UNMUTE")
 
     def run_whisper(self):
-        now = datetime.now()
-        datetime_string = now.strftime("%Y-%m-%d_%H-%M-%S")
-        subfolder = "subfolder"
-        base_dir = os.getcwd()
-
-        os.makedirs(os.path.join(base_dir, subfolder), exist_ok=True)
-
-        command = f"adintool.exe -in mic -out adinnet -server 127.0.0.1  -port 5533 -cutsilence -nostrip -lv 1000"
-        subprocess.Popen(command, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
-        adinserversock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        adinserversock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        adinserversock.bind(("127.0.0.1", 5533))
-        adinserversock.listen(1)
-        adinclientsock, adinclient_address = adinserversock.accept()
-        print("ASR model whisper loaded")
-        self.system.enqueue_gpt_request("System Greetings")
-        buffer = b''
-        while True:
-            rcvmsg = adinclientsock.recv(4)
-            nbytes = struct.unpack('=i', rcvmsg)[0]
-            tmpdata = adinclientsock.recv(nbytes)
-            buffer += tmpdata
-            self.system.talking = True
-            print(".", end='', flush=True)
-            if nbytes == 0:
-                print(".")
-                # We received an EOF marker, write the accumulated buffer to the file
-                with wave.open("temp.wav", "wb") as wav_file:
-                    wav_file.setparams((1, 2, 16000, 0, 'NONE', 'NONE'))
-                    wav_file.writeframes(buffer)
-                    
-                result = self.whisper_model.transcribe("temp.wav")
-                self.checkForCommands(str(result['text']))
-                self.system.enqueue_gpt_request(str(result['text']))
-
-                # Clear the buffer
-                buffer = b''
-                self.system.talking = False
+        import whisper
+        self.init_whisper()
+        self.whisper_model = whisper.load_model("base")
+        self.run_transcription_loop(transcribe_method=self.transcribe_whisper)
 
     def run_whisper_online(self):
+        self.init_whisper()
+        self.run_transcription_loop(transcribe_method=self.transcribe_whisper_online)
+
+    def init_whisper(self):
         command = f"adintool.exe -in mic -out adinnet -server 127.0.0.1  -port 5533 -cutsilence -nostrip -lv 1000"
         subprocess.Popen(command, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+
         adinserversock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         adinserversock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         adinserversock.bind(("127.0.0.1", 5533))
         adinserversock.listen(1)
-        adinclientsock, adinclient_address = adinserversock.accept()
-        whisper_model = whisper.load_model("base")
-        print("ASR model whisper online loaded")
-        self.system.enqueue_gpt_request("System Greetings")
+        
+        self.adinclientsock, _ = adinserversock.accept()
+
+    def run_transcription_loop(self, transcribe_method):
+        print(f"ASR model {self.model} loaded")
+        print("Listening...")
         buffer = b''
         while True:
-            rcvmsg = adinclientsock.recv(4)
-            nbytes = struct.unpack('=i', rcvmsg)[0]
-            tmpdata = adinclientsock.recv(nbytes)
-            buffer += tmpdata
-            self.system.talking = True
-            print(".", end='', flush=True)
-            if nbytes == 0:
-                print(".")
-                # We received an EOF marker, write the accumulated buffer to the file
-                with wave.open("temp.wav", "wb") as wav_file:
-                    wav_file.setparams((1, 2, 16000, 0, 'NONE', 'NONE'))
-                    wav_file.writeframes(buffer)
-                with open("temp.wav", "rb") as audio_file:
-                    result = openai.Audio.transcribe("whisper-1", audio_file)
-                    self.checkForCommands(str(result['text']))
-                    self.system.enqueue_gpt_request(str(result['text']))
+            try:
+                rcvmsg = self.adinclientsock.recv(4)
+                nbytes = struct.unpack(BUFFER_FORMAT, rcvmsg)[0]
+                tmpdata = self.adinclientsock.recv(nbytes)
+                buffer += tmpdata
+                self.system.talking = True
+                print(".", end='', flush=True)
 
-                # Clear the buffer
-                buffer = b''
-                self.system.talking = False
+                if nbytes == EOF_MARKER:
+                    print(".")
+                    self.process_transcription(buffer, transcribe_method)
+                    buffer = b''
+                    self.system.talking = False
+
+            except Exception as e:
+                print(f"Error occurred: {str(e)}")
+                break
+
+        self.adinclientsock.close()
+
+    def process_transcription(self, buffer, transcribe_method):
+        with wave.open(TEMP_WAV, "wb") as wav_file:
+            wav_file.setparams(WAVE_PARAMS)
+            wav_file.writeframes(buffer)
+
+        result = transcribe_method()
+        self.checkForCommands(str(result['text']))
+        self.system.enqueue_gpt_request(str(result['text']))
+
+    def transcribe_whisper(self):
+        return self.whisper_model.transcribe(TEMP_WAV)
+
+    def transcribe_whisper_online(self):
+        with open(TEMP_WAV, "rb") as audio_file:
+            return openai.Audio.transcribe("whisper-1", audio_file)
+
     def increase_volume(self, buffer, factor):
         # The buffer contains raw audio data in the form of bytes. 
         # To increase the volume, you need to unpack those bytes into integers, increase their value, and then pack them back into bytes.

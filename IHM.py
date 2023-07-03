@@ -1,5 +1,5 @@
 import pygame
-import sys
+import os
 import math
 
 
@@ -21,6 +21,10 @@ class TalkingIndicator:
     def speaking(self):
         return self.system.speaking
 
+    @property
+    def thinking(self):
+        return self.system.thinking
+
     def init_pygame(self):
         pygame.init()
         self.screen = pygame.display.set_mode((400, 400))
@@ -32,7 +36,7 @@ class TalkingIndicator:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
-                    sys.exit()
+                    os._exit(0)
 
             self.screen.fill((0,0,0))
              # If speaking, make the sphere beat faster, bigger and change color
@@ -57,10 +61,12 @@ class TalkingIndicator:
 
             # Draw the beating sphere
             pygame.draw.circle(self.screen, self.color, (200,200), int(radius),self.width)
+            if self.thinking:
+                pygame.draw.circle(self.screen, (255,0,124), (200,200), 40)
 
             # Draw a circle at the bottom, color depends on self.talking
             color = (0,255,0) if self.talking else (255,0,0)
-            pygame.draw.circle(self.screen, self.color, (200, 350), 25)
+            pygame.draw.circle(self.screen, color, (200, 350), 25)
 
             pygame.display.flip()
             self.clock.tick(60)

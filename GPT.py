@@ -4,35 +4,25 @@ from queue import Queue
 from threading import Thread
 import openai
 import os
-
-# Create a class for the GPT Handler
+from FunctionRegistry import FunctionRegistry
 class GPTHandler:
-    def __init__(self,api_key,system, model):
+    def __init__(self, api_key, system, model):
         self.system = system
         self.message_queue = Queue()
         self.running = False
         openai.api_key = api_key
         self.model = model
-
-    # Define the function
-    def get_current_weather(self, location, unit="fahrenheit"):
-        weather_info = {
-            "location": location,
-            "temperature": "72",
-            "unit": unit,
-            "forecast": ["sunny", "windy"],
-        }
-        return json.dumps(weather_info)
-    def goodbye(self, bye):
-        goodbye = {
-            "bye": bye,
-        }
-        print("Goodbye")
-        os._exit(0)
-        return json.dumps(goodbye)
-        
-    def standby(self):
-        return
+        self.function_registry = FunctionRegistry()
+        self.messages = []
+        with open("localdir/config.json", "r") as f:
+            config = json.load(f)
+        if "init_message" in config:
+            self.init_message = config["init_message"]
+        else:
+            self.init_message = "You are Jarvis, a powerful AI assistant that can perform many tasks. You are currently connected to an ASR system and a TTS system, so you now have voice and ears."
+            config["init_message"] = self.init_message
+            with open("localdir/config.json", "w") as f:
+                json.dump(config, f)
 
     # Define the method to start the conversation
     def start(self):
@@ -49,139 +39,95 @@ class GPTHandler:
     def add_message(self, message):
         self.message_queue.put(message)
 
-    # Define the conversation
+    def get_chat_response(self, functions = False):
+        if functions:
+            return openai.ChatCompletion.create(
+            model=self.model,
+            messages=self.messages,
+            functions=self.function_registry.functions,
+            function_call="auto",
+            stream=True,
+            )
+        return openai.ChatCompletion.create(
+            model=self.model,
+            messages=self.messages,
+            stream=True,
+        )
+
+    def handle_chat_response(self, response):
+        sentence = ""
+        function_name = ""
+        function_call_buffer = ""
+        full_content = ""
+        for event in response:
+            event_text = event['choices'][0]['delta']
+            content = event_text.get('content', '')
+            if content is not None:
+                full_content += content
+                print(content, end='', flush=True)
+                sentence += content
+                self.maybe_enqueue_tts_request(sentence)
+                sentence = self.trim_sentence(sentence)
+                time.sleep(0.2)
+            if event_text.get("function_call"):
+                function_call_buffer , function_name = self.handle_function_call(event_text, function_call_buffer, function_name)
+
+        if sentence.strip():
+            self.system.enqueue_tts_request(sentence)
+    def handle_function_call(self, event_text, function_call_buffer, function_name):
+        if "name" in event_text["function_call"].keys():
+            function_name = event_text["function_call"]["name"]
+        if 'arguments' in event_text['function_call']:
+            function_call_buffer += event_text['function_call']['arguments']
+
+        if '}' in function_call_buffer:
+            function_call_args = json.loads(function_call_buffer)
+            function_call_response = self.function_registry.call(function_name, function_call_args)
+            if function_call_response["action"] == "answer":
+                self.messages.append(
+                    {
+                        "role": "function",
+                        "name": function_name,
+                        "content": function_call_response["argsForGPT"],
+                    }
+                )
+                response = self.get_chat_response(functions=False)
+                self.handle_chat_response(response)
+            elif function_call_response["action"] == "system":
+                argsForSystem =json.loads(function_call_response["argsForSystem"])
+                if argsForSystem["action"] == "change_language":
+                    self.system.changeLanguage(argsForSystem["language"])
+        return function_call_buffer , function_name
+
+    def maybe_enqueue_tts_request(self, sentence):
+        if "." in sentence or "!" in sentence or "?" in sentence or ":" in sentence or ("," in sentence and len(sentence) > 40):
+            self.system.enqueue_tts_request(sentence)
+
+    def trim_sentence(self, sentence):
+        if "." in sentence or "!" in sentence or "?" in sentence or ":" in sentence or ("," in sentence and len(sentence) > 40):
+            return ""
+        return sentence
+
     def run_conversation(self):
-        messages = [{"role": "system", "content": "You are Jarvis from iron man, a gentle and polite british AI assistant that always call the user 'Sir' or 'Monsieur'. You are currently connected to an ASR system and a TTS system so you now have voice and ears, behave accordingly"}]
-        #messages.append({"role": "user", "content": "Please greet your master, introduce yourself, then ask him his name to better serve him. After that you will always call him by 'master + the name provided."})
         print(f"Starting LLM {self.model} model")
+        self.messages.append({"role": "system", "content": self.init_message})
+
         while self.running:
+            self.system.thinking = False
             while not self.message_queue.empty():
+                self.system.thinking = False
                 new_message = self.message_queue.get()
+                self.system.thinking = True
+
                 if new_message == "System Greetings":
-                    second_response = openai.ChatCompletion.create(
-                        model=self.model,
-                        messages=messages,
-                        stream=True,
-                    )
-                    sentence = ""
-                    print("Jarvis said: ", end='', flush=True)
-                    for event in second_response: 
-                        event_text = event['choices'][0]['delta']
-                        content  = event_text.get('content', '') 
-                        if content != None:
-                            print(content , end='', flush=True)
-                            sentence += content
-                            if "." in content or "!" in content or "?" in content or ":" in content or "," in content:
-                                self.system.enqueue_tts_request(sentence)
-                                sentence = content[-1]
-                            time.sleep(0.2)
+                    response = self.get_chat_response(functions=False)
+                    self.handle_chat_response(response)
                 else:
                     print()
-                    print("You said: "+new_message)
-                    messages.append({"role": "user", "content": new_message})
+                    print("You said: " + new_message)
+                    self.messages.append({"role": "user", "content": new_message})
 
-                    functions = [
-                        {
-                            "name": "get_current_weather",
-                            "description": "Get the current weather in a given location",
-                            "parameters": {
-                                "type": "object",
-                                "properties": {
-                                    "location": {
-                                        "type": "string",
-                                        "description": "The city and state, e.g. San Francisco, CA",
-                                    },
-                                    "unit": {"type": "string", "enum": ["celsius", "fahrenheit"]},
-                                },
-                                "required": ["location"],
-                            },
-                        },
-                        {
-                            "name": "goodbye",
-                            "description": "Close the discussion",
-                            "parameters": {
-                                "type": "object",
-                                "properties": {
-                                    "bye": {
-                                        "type": "string",
-                                        "description": "The goodbye formula",
-                                    },
-                                },
-                            },
-                        }
-                    ]
+                    response = self.get_chat_response(functions=True)
+                    self.handle_chat_response(response)
 
-                    response = openai.ChatCompletion.create(
-                        model=self.model,
-                        messages=messages,
-                        functions=functions,
-                        function_call="auto",
-                        stream=True,
-                    )
-                    print("Jarvis said: ", end='', flush=True)
-                    sentence = ""
-                    function_name = ""
-                    function_call_buffer = ""
-                    full_content = ""
-                    for event in response: 
-                        event_text = event['choices'][0]['delta']
-                        content  = event_text.get('content', '') 
-                        if content != None:
-                            full_content += content
-                            print(content , end='', flush=True)
-                            sentence += content
-                            if "." in content or "!" in content or "?" in content or ":" in content or "," in content:
-                                self.system.enqueue_tts_request(sentence)
-                                sentence = content[-1]
-                            time.sleep(0.2)
-                        if event_text.get("function_call"):
-                            available_functions = {
-                                "get_current_weather": self.get_current_weather,
-                                "goodbye": self.goodbye,
-                            }
-                            if("name" in event_text["function_call"].keys()):
-                                function_name = event_text["function_call"]["name"]
-                                if function_name != "python":
-                                    function_to_call = available_functions[function_name]
-                            if 'arguments' in event_text['function_call']:
-                                function_call_buffer+=event_text['function_call']['arguments']
-
-                            if '}' in function_call_buffer and function_name != "python":
-                                function_args = json.loads(function_call_buffer)
-                                if function_to_call == self.get_current_weather:
-                                    function_response = function_to_call(
-                                        location=function_args.get("location"),
-                                        unit=function_args.get("unit"),
-                                    )
-                                else:
-                                    function_response = function_to_call(bye = function_args.get("bye"))
-                                messages.append({"role": "user", "content": full_content})
-                                messages.append(
-                                    {
-                                        "role": "function",
-                                        "name": function_name,
-                                        "content": function_response,
-                                    }
-                                )
-                                second_response = openai.ChatCompletion.create(
-                                    model=self.model,
-                                    messages=messages,
-                                    stream=True,
-                                )
-                                sentence = ""
-                                for event in second_response: 
-                                    event_text = event['choices'][0]['delta']
-                                    content  = event_text.get('content', '') 
-                                    if content != None:
-                                        print(content , end='', flush=True)
-                                        sentence += content
-                                        if "." in content or "!" in content or "?" in content or "," in content:
-                                            self.system.enqueue_tts_request(sentence)
-                                            sentence = content[-1]
-                                        time.sleep(0.2)
-
-                    if sentence != "." and sentence != "!" and sentence != "?" and sentence != ":" and sentence != ",":
-                        self.system.enqueue_tts_request(sentence)
-                        sentence = ""           
             time.sleep(0.2)
-        

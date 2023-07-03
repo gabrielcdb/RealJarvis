@@ -1,3 +1,8 @@
+import json
+import configparser
+import openai
+import os
+BYPASS = True
 def askForKeys():
     gpt_key = input("Please enter your GPT key, you can get it at https://platform.openai.com/account/api-keys \n\
     Gpt key: ")
@@ -12,7 +17,7 @@ def askForKeys():
         file.write('GPT_KEY=' + gpt_key + '\n')
         file.write('ELEVENLAB_KEY=' + elevenlab_key + '\n')
 
-def get_keys():
+def get_keys(file_path):
     config = configparser.ConfigParser()
     config.read(file_path)
     
@@ -35,7 +40,7 @@ def checkGPTKeyValidity(gpt_key):
 def checkForAvailableASRModels():
     availablemodel = []
 
-    return ["whisper-online","whisper"]
+    return ["whisper-online","whisper","lee-ueno"]
 def checkForAvailableTTSModels():
     availablemodel = []
     return ["elevenlabs", "gtts","pytts",]
@@ -81,7 +86,7 @@ def CreateNewAIConf():
         config = json.load(config_file)
     return config
     
-def load_config(local_dir):
+def load_config(local_dir, bypass = False):
     # Create a path to the config file
     config_file_path = os.path.join(local_dir, "config.json")
 
@@ -97,7 +102,10 @@ def load_config(local_dir):
             print(f"{key}: {value}")
 
         # Ask the user if they want to use the current configuration
-        choice = input("Do you want to use the current configuration? (y/n) ")
+        if not bypass:
+            choice = input("Do you want to use the current configuration? (y/n) ")
+        else: 
+            choice = "y"
         if choice.lower() == 'y':
             return config
         elif choice.lower() == 'n':
@@ -113,12 +121,6 @@ def load_config(local_dir):
         return load_config(local_dir)
 
 if __name__ == "__main__":
-    import json
-    import configparser
-    import openai
-    import elevenlabs
-    import os
-
     local_dir = "localdir"
     file_name = "api_keys.txt"
     # Check if directory exists
@@ -130,14 +132,14 @@ if __name__ == "__main__":
         askForKeys()
     valid_key = False
     while valid_key == False:
-        gpt_key, elevenlab_key = get_keys()
+        gpt_key, elevenlab_key = get_keys(file_path)
         if not checkGPTKeyValidity(gpt_key):
             print("Invalid GPT key, please make sure the key is valid (There is not check on elevenlabs key yet, be carefull too")
             askForKeys()
         else:
             valid_key = True
 
-    config = load_config(local_dir)
+    config = load_config(local_dir, BYPASS)
 
     # Extract the models from the configuration
     ASRmodelList = ASRmodelList = checkForAvailableASRModels()

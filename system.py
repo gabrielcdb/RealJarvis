@@ -1,7 +1,7 @@
 # Note: you need to be using OpenAI Python v0.27.0 for the code below to work
 import queue
 import threading
-from TTS import TTSManager
+from TTS import TTSManagerFactory
 from GPT import GPTHandler
 from ASR import ASR
 
@@ -9,10 +9,12 @@ class System:
     def __init__(self, ASRmodelList, TTSmodelList, LLMmodelList, ASRmodelSelected , TTSmodelSelected , LLMmodelSelected, gpt_key, elevenlab_key):
         self.talking = False
         self.speaking = False
+        self.thinking = False
         self.ASRmodelList = ASRmodelList
         self.TTSmodelList = TTSmodelList
         self.LLMmodelList = LLMmodelList
-        self.tts_manager = TTSManager(system = self, model = self.TTSmodelList[TTSmodelSelected], api_key = elevenlab_key)
+        self.TTSmodelSelected = TTSmodelSelected
+        self.tts_manager = TTSManagerFactory.create(system = self, model = self.TTSmodelList[TTSmodelSelected], api_key = elevenlab_key)
         self.gpt_handler = GPTHandler(system = self, model=self.LLMmodelList[LLMmodelSelected], api_key = gpt_key)
         self.asr = ASR(self, model = self.ASRmodelList[ASRmodelSelected])
 
@@ -89,7 +91,31 @@ class System:
             
             # Mark the task as done
             self.asr_queue.task_done()
+    def changeLanguage(self, language):
+        if self.TTSmodelList[self.TTSmodelSelected] == "gtts":
+            self.tts_manager.changeLanguage(language) 
 
 if __name__ == "__main__":
-    system = System()
+    import os
+    from Jarvis import askForKeys,get_keys,checkGPTKeyValidity
+    local_dir = "localdir"
+    file_name = "api_keys.txt"
+
+    # Check if directory exists
+    if not os.path.isdir(local_dir):
+        # If not, create the directory
+        os.makedirs(local_dir)
+    file_path = os.path.join(local_dir, file_name)
+    if not os.path.isfile(file_path):
+        askForKeys()
+    valid_key = False
+    while valid_key == False:
+        gpt_key, elevenlab_key = get_keys(file_path)
+        if not checkGPTKeyValidity(gpt_key):
+            print("Invalid GPT key, please make sure the key is valid (There is not check on elevenlabs key yet, be carefull too")
+            askForKeys()
+        else:
+            valid_key = True
+
+    system = System(["whisper-online","whisper","lee-ueno"],["elevenlabs", "gtts","pytts",],["gpt-3.5-turbo-0613"],1,1,0,gpt_key, elevenlab_key)
     system.run()

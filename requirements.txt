@@ -1,0 +1,10 @@
+###### Requirements without Version Specifiers ######
+openai
+git+https://github.com/openai/whisper.git
+pygame
+pyttsx3
+gTTS
+elevenlabs
+
+###### Requirements with Version Specifiers ######
+pydantic == 1.10.10             # Version Matching. Must be version 0.6.1
