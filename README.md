@@ -21,6 +21,7 @@ For now actions supported are:
     -Muting and unmuting itself (need improvements)
 
     *Incoming:
+    -Voice customization, with elevenlabs
     -Get local weather from you computer data 
     -Generating word file and fill it 
     -Open a web page
