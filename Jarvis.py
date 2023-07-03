@@ -2,7 +2,7 @@ import json
 import configparser
 import openai
 import os
-BYPASS = True
+BYPASS = False
 def askForKeys():
     gpt_key = input("Please enter your GPT key, you can get it at https://platform.openai.com/account/api-keys \n\
     Gpt key: ")
