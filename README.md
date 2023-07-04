@@ -125,3 +125,5 @@ By using RealJarvis, you agree to indemnify, defend, and hold harmless the devel
 
     Also, The LEE_UENO model refered in the code is a model I have localy but can't share since it was provided to me in a Scholar work by my laboratory Sensei at Nagoya Institute of Technology, so I pushed it but if I have no return from them saying I can publish it, you will not be able to use it.
     Also, huge thanks to them (Akinobu Lee and Sei Ueno) who introduced me to ASR and speech recognition technologies.
+
+If any reclamations or if you want to discuss the project, contact us at gabibox.code.gaming.talks@gmail.com
