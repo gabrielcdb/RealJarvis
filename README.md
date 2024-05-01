@@ -13,7 +13,7 @@ Stay tuned!
 By the way, this is all python very quick code for now, I'm not sure yet in the framework I will use, but I also want to keep it as accessible as I can for getting as much help as I can!
 
 ## 🎬 Demonstration
-https://www.twitch.tv/videos/1861765919
+[https://www.twitch.tv/videos/1861765919](https://www.twitch.tv/videos/1861749404)
 
 ## 📖 Functionnalities
 RealJarvis can handle common GPT conversations.
